@@ -5,6 +5,11 @@
 # Version : See last Git commit date below
 # =============================================================
 
+# --- param MUST be the first non-comment line in the script ---
+param (
+    [string[]]$CmdArgs = @()
+)
+
 # =============================================================
 # --- CONFIGURATION - Fill in before running               ---
 # =============================================================
@@ -13,13 +18,8 @@ $myToken = "github_pat_YOURTOKENHERE"
 
 # =============================================================
 
-# --- Capture raw arguments to support --dryrun style flag ---
-param (
-    [string[]]$Args = @()
-)
-
 # --- Check if --dryrun was passed ---
-$DryRun = $Args -contains "--dryrun"
+$DryRun = $CmdArgs -contains "--dryrun"
 
 # --- Get the last Git commit date and use it as the version ---
 # --- Falls back to today's date if git is not available yet on a new PC ---
@@ -49,11 +49,10 @@ function Write-SectionHeader($title) {
     Write-Host ""
 }
 
-# --- Reusable function to save state after each completed section ---
+# --- Reusable function to save state ---
+# --- Path is hardcoded so it always knows where to write ---
 function Save-State {
-    if (-not $DryRun) {
-        $state | ConvertTo-Json | Set-Content $stateFile
-    }
+    $state | ConvertTo-Json | Set-Content "C:\Temp\hamellco\state.json"
 }
 
 # =============================================================
@@ -84,29 +83,21 @@ $hamellcoFolder = "C:\Temp\hamellco"
 $identityFile   = Join-Path $hamellcoFolder "pc-identity.json"
 $stateFile      = Join-Path $hamellcoFolder "state.json"
 
-# --- Create C:\Temp\hamellco if it doesn't exist ---
+# --- Always create C:\Temp\hamellco regardless of dry run ---
+# --- State file needs somewhere to live even during testing ---
 if (-not (Test-Path $hamellcoFolder)) {
-    if ($DryRun) {
-        Write-Host "  [DRY RUN] Would create folder: $hamellcoFolder" -ForegroundColor DarkYellow
-        Write-Host ""
-    } else {
-        New-Item -ItemType Directory -Path $hamellcoFolder | Out-Null
-        Write-Host "  Created folder: $hamellcoFolder" -ForegroundColor DarkGray
-        Write-Host ""
-    }
+    New-Item -ItemType Directory -Path $hamellcoFolder | Out-Null
+    Write-Host "  Created folder: $hamellcoFolder" -ForegroundColor DarkGray
+    Write-Host ""
 }
 
 # =============================================================
 # --- Sync Identity File from GitHub ---
-# --- Pulls the latest pc-identity.json from the repo before  ---
-# --- doing any identity checks so we always have the full    ---
-# --- list of known machines                                  ---
 # =============================================================
 
 Write-SectionHeader "Syncing Identity File"
 
 if (-not $myToken -or $myToken -eq "github_pat_YOURTOKENHERE") {
-    # --- Token not filled in - skip sync and use local file ---
     Write-Host "  No token set - skipping sync, using local identity file." -ForegroundColor DarkYellow
     Write-Host ""
 } elseif ($DryRun) {
@@ -152,52 +143,60 @@ if ($state.identityDone) {
 } else {
     Write-SectionHeader "PC Identity"
 
-    $pcName = $env:COMPUTERNAME
-
+    $pcName       = $env:COMPUTERNAME
     $identityData = @()
+
     if (Test-Path $identityFile) {
         $identityData = Get-Content $identityFile | ConvertFrom-Json
     }
 
-    $existingIdentity = $identityData | Where-Object { $_.windowsName -eq $pcName }
-
     if ($pcName -eq "Scheherazade") {
-        if ($existingIdentity) {
-            Write-Host "  Welcome back, Scheherazade." -ForegroundColor Green
-            Write-Host ""
-            $state.identityDone = $true
-            Save-State
+
+        $confirm = Read-Host "  This PC is Scheherazade. Are you setting up a new Scheherazade? (yes/no)"
+
+        if ($confirm -eq "yes") {
+            $newEntry = [PSCustomObject]@{
+                windowsName = $pcName
+                identity    = "Scheherazade"
+                type        = "Primary"
+                assigned    = (Get-Date -Format "yyyy-MM-dd")
+            }
+            if ($DryRun) {
+                Write-Host "  [DRY RUN] Would register Scheherazade with the following data:" -ForegroundColor DarkYellow
+                Write-Host ($newEntry | ConvertTo-Json) -ForegroundColor DarkYellow
+            } else {
+                $identityData += $newEntry
+                $identityData | ConvertTo-Json -Depth 3 | Set-Content $identityFile
+                Write-Host "  Scheherazade has been registered." -ForegroundColor Green
+            }
         } else {
-            $confirm = Read-Host "  Are you setting up a new Scheherazade? (yes/no)"
-            if ($confirm -eq "yes") {
+            Write-Host "  Confirmed existing Scheherazade - moving on." -ForegroundColor Green
+        }
+
+        $state.identityDone = $true
+        Save-State
+        Write-Host ""
+
+    } else {
+
+        $confirm = Read-Host "  This PC is not Scheherazade. Should it be renamed to Scheherazade? (yes/no)"
+
+        if ($confirm -eq "yes") {
+            if ($DryRun) {
+                Write-Host "  [DRY RUN] Would rename this PC to Scheherazade." -ForegroundColor DarkYellow
+            } else {
+                Rename-Computer -NewName "Scheherazade" -Force
                 $newEntry = [PSCustomObject]@{
-                    windowsName = $pcName
+                    windowsName = "Scheherazade"
                     identity    = "Scheherazade"
                     type        = "Primary"
                     assigned    = (Get-Date -Format "yyyy-MM-dd")
                 }
-                if ($DryRun) {
-                    Write-Host "  [DRY RUN] Would register Scheherazade with the following data:" -ForegroundColor DarkYellow
-                    Write-Host ($newEntry | ConvertTo-Json) -ForegroundColor DarkYellow
-                } else {
-                    $identityData += $newEntry
-                    $identityData | ConvertTo-Json -Depth 3 | Set-Content $identityFile
-                    Write-Host "  Scheherazade has been registered." -ForegroundColor Green
-                    $state.identityDone = $true
-                    Save-State
-                }
-                Write-Host ""
-            } else {
-                Write-Host "  OK - no changes made." -ForegroundColor Yellow
-                Write-Host ""
+                $identityData += $newEntry
+                $identityData | ConvertTo-Json -Depth 3 | Set-Content $identityFile
+                Write-Host "  PC has been renamed to Scheherazade." -ForegroundColor Green
+                Write-Host "  A restart is required for the name change to take effect." -ForegroundColor Yellow
             }
-        }
-    } else {
-        if ($existingIdentity) {
-            Write-Host "  Welcome back, $($existingIdentity.identity)" -ForegroundColor Green
-            Write-Host ""
-            $state.identityDone = $true
-            Save-State
         } else {
             $chassisTypes = (Get-WmiObject -Class Win32_SystemEnclosure).ChassisTypes
             $isLaptop     = $chassisTypes | Where-Object { $_ -in @(8,9,10,11,12,14,18,21) }
@@ -220,11 +219,12 @@ if ($state.identityDone) {
                 $identityData += $newEntry
                 $identityData | ConvertTo-Json -Depth 3 | Set-Content $identityFile
                 Write-Host "  New PC detected. Assigned identity: $newIdentity" -ForegroundColor Cyan
-                $state.identityDone = $true
-                Save-State
             }
-            Write-Host ""
         }
+
+        $state.identityDone = $true
+        Save-State
+        Write-Host ""
     }
 }
 
@@ -273,6 +273,8 @@ if ($state.activationDone) {
         if ($DryRun) {
             Write-Host "  [DRY RUN] Would launch Microsoft Activation Scripts (MAS) to activate Windows." -ForegroundColor DarkYellow
             Write-Host ""
+            $state.activationDone = $true
+            Save-State
         } else {
             Write-Host "  Opening Microsoft Activation Scripts (MAS)..." -ForegroundColor Yellow
             Write-Host "  Please complete the activation in the window that opens." -ForegroundColor Yellow
@@ -348,6 +350,10 @@ if ($state.personalizationDone) {
         Write-Host "  - Combine Buttons      : Always" -ForegroundColor DarkYellow
         Write-Host "  - Smaller Buttons      : When taskbar is full" -ForegroundColor DarkYellow
         Write-Host ""
+
+        $state.personalizationDone = $true
+        Save-State
+
     } else {
         # --- Appearance ---
         Set-ItemProperty -Path $personalizationKey -Name "AppsUseLightTheme"    -Value 0 -Type DWord
@@ -453,9 +459,8 @@ if ($state.identityDone -and $state.activationDone -and $state.personalizationDo
     Write-Centered "=============================================" "Cyan"
     Write-Host ""
 
-    if (-not $DryRun) {
-        Remove-Item $stateFile -Force
-        Write-Host "  State file cleared. Ready for next setup." -ForegroundColor DarkGray
-        Write-Host ""
-    }
+    # --- Clear state file so it is fresh for next setup ---
+    Remove-Item "C:\Temp\hamellco\state.json" -Force
+    Write-Host "  State file cleared. Ready for next setup." -ForegroundColor DarkGray
+    Write-Host ""
 }

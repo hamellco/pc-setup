@@ -1,0 +1,44 @@
+{
+  "$schema": "https://aka.ms/winget-packages.schema.2.0.json",
+  "CreationDate": "2026-02-28",
+  "Sources": [
+    {
+      "Packages": [
+        { "PackageIdentifier": "Vencord.Vesktop" },
+        { "PackageIdentifier": "7zip.7zip" },
+        { "PackageIdentifier": "ShareX.ShareX" },
+        { "PackageIdentifier": "Git.Git" },
+        { "PackageIdentifier": "REALiX.HWiNFO" },
+        { "PackageIdentifier": "IrfanSkiljan.IrfanView" },
+        { "PackageIdentifier": "Cyanfish.NAPS2" },
+        { "PackageIdentifier": "Notepad++.Notepad++" },
+        { "PackageIdentifier": "RustDesk.RustDesk" },
+        { "PackageIdentifier": "VideoLAN.VLC" },
+        { "PackageIdentifier": "AntibodySoftware.WizTree" },
+        { "PackageIdentifier": "AtomixProductions.VirtualDJ" },
+        { "PackageIdentifier": "TheDocumentFoundation.LibreOffice" },
+        { "PackageIdentifier": "AgileBits.1Password" },
+        { "PackageIdentifier": "TechPowerUp.NVCleanstall" },
+        { "PackageIdentifier": "Plex.Plex" },
+        { "PackageIdentifier": "Valve.Steam" },
+        { "PackageIdentifier": "Tailscale.Tailscale" },
+        { "PackageIdentifier": "Plex.Plexamp" },
+        { "PackageIdentifier": "Anthropic.Claude" },
+        { "PackageIdentifier": "OO-Software.ShutUp10" },
+        { "PackageIdentifier": "SumatraPDF.SumatraPDF" },
+        { "PackageIdentifier": "Obsidian.Obsidian" },
+        { "PackageIdentifier": "ImputNet.Helium" },
+        { "PackageIdentifier": "LocalSend.LocalSend" },
+        { "PackageIdentifier": "Microsoft.PowerToys" },
+        { "PackageIdentifier": "JanDeDobbeleer.OhMyPosh" },
+        { "PackageIdentifier": "Microsoft.PowerShell" }
+      ],
+      "SourceDetails": {
+        "Argument": "https://cdn.winget.microsoft.com/cache",
+        "Identifier": "Microsoft.Winget.Source_8wekyb3d8bbwe",
+        "Name": "winget",
+        "Type": "Microsoft.PreIndexed.Package"
+      }
+    }
+  ]
+}
